@@ -239,14 +239,13 @@ def load_dataset(
     # Get and report sequence length
     L = len(data_df.loc[0, "x"])
     print(f"Sequence length: {L:d} amino acids")
-    # protein alphabet length
-    C = 20
 
     # Get the training dataset (x,y)
     # Convert the sequences to the one-hot encoded array
 
     x_stats = x_to_stats(data_df["x"], alphabet=alphabet, verbose=True)
     x = x_stats["x_ohe_nonravel"]
+    C = x.shape[2]
     # training data is in log2 format
     y = data_df["y"].values
 

@@ -13,4 +13,4 @@ def test_load_dataset():
     assert x.shape == (16066, 42, 21)
     assert y.shape == (16066, 1)
     assert L == 42
-    assert C == 20
+    assert C == 21
