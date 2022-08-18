@@ -1,3 +1,7 @@
+linter:
+	flake8 mavebay
+	flake8 tests/
+
 test:
 	pytest tests/
 

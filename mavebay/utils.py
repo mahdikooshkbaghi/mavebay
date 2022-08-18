@@ -150,13 +150,8 @@ def x_to_stats(
         weights = np.ones(len(x))
     else:
         weights = weights.astype(float)
-        check(
-            len(weights) == len(x),
-            f"len(weights)={len(weights)} does not match len(x)={len(x)}",
-        )
 
     # Do one-hot encoding of sequences
-    t = time.time()
     x_nlc = x_to_ohe(x, alphabet, ravel_seqs=False)
     N, L, C = x_nlc.shape
 
@@ -198,14 +193,14 @@ def x_to_stats(
     # Adding noise prevents ties
     x_sum_lc += 1e-1 * np.random.rand(*x_sum_lc.shape)
     stats["consensus_seq"] = "".join(
-        [alphabet[np.argmax(x_sum_lc[l, :])] for l in range(L)]
+        [alphabet[np.argmax(x_sum_lc[k, :])] for k in range(L)]
     )
 
     # Compute mask dict
     missing_dict = {}
-    for l in range(L):
-        if any(~x_support_lc[l, :]):
-            missing_dict[l] = "".join(alphabet[~x_support_lc[l, :]])
+    for k in range(L):
+        if any(~x_support_lc[k, :]):
+            missing_dict[k] = "".join(alphabet[~x_support_lc[k, :]])
     stats["missing_char_dict"] = missing_dict
 
     # Provide feedback if requested
@@ -255,9 +250,9 @@ def load_dataset(
     # training data is in log2 format
     y = data_df["y"].values
 
-    if verbose == True:
+    if verbose:
         # Preview dataset
-        print(f"\nDataset looks like:")
+        print("\nDataset looks like:")
         print(data_df.head())
         print(f"\nDataset consists of {len(data_df)} sequences\n")
     return jnp.array(x), jnp.array(y).reshape(-1, 1), L, C
