@@ -7,8 +7,8 @@ import numpyro.distributions as dist
 from jax.numpy import DeviceArray
 
 from .gpmaps import additive_gp_map
-from .measurements import ge_measurement
 from .infer import fit
+from .measurements import ge_measurement
 
 
 class Model:

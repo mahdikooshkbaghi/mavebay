@@ -1,13 +1,11 @@
 import time
-from numpyro.infer import SVI, autoguide
-from numpyro.infer import init_to_sample
-from numpyro.infer import Trace_ELBO
+
+import jax.numpy as jnp
 import numpyro.optim as optim
-from numpyro.infer import NUTS, MCMC
 
 # jax imports
 from jax.numpy import DeviceArray
-import jax.numpy as jnp
+from numpyro.infer import MCMC, NUTS, SVI, Trace_ELBO, autoguide, init_to_sample
 
 
 class fit:
