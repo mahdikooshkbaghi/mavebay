@@ -1,8 +1,12 @@
 ### Pytest Cache folder ###
 .pytest_cache/*
 
+### Coverage test report folder ###
+htmlcov/
+
+
 ### VisualStudioCode ###
-.vscode/*
+.vscode/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
@@ -301,5 +305,3 @@ Sessionx.vim
 tags
 # Persistent undo
 [._]*.un~
-
-# End of https://www.toptal.com/developers/gitignore/api/python,vim,macos,emacs,jupyternotebooks
