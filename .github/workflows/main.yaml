@@ -54,10 +54,10 @@ jobs:
       - name: Run linters
         run: |
           echo "Running linters"
-          flake8 mavebay
-          flake8 tests
-          isort --check-only . 2>&1
+          flake8 --per-file-ignores="__init__.py:F401,F403" mavebay
+	        flake8 --per-file-ignores="__init__.py:F401,F403" tests
           black --check . 2>&1
+          isort --profile black --check-only . 2>&1
 
       - name: Upload pytest test results
         uses: actions/upload-artifact@master

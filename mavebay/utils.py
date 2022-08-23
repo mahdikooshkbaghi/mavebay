@@ -5,6 +5,7 @@ from typing import Optional, Tuple
 
 import jax.numpy as jnp
 import numpy as np
+import numpyro
 import pandas as pd
 from jax.numpy import DeviceArray
 
@@ -245,6 +246,7 @@ def load_dataset(
 
     x_stats = x_to_stats(data_df["x"], alphabet=alphabet, verbose=True)
     x = x_stats["x_ohe_nonravel"]
+    cons_seq = x_stats["consensus_seq"]
     C = x.shape[2]
     # training data is in log2 format
     y = data_df["y"].values
@@ -254,4 +256,16 @@ def load_dataset(
         print("\nDataset looks like:")
         print(data_df.head())
         print(f"\nDataset consists of {len(data_df)} sequences\n")
-    return jnp.array(x), jnp.array(y).reshape(-1, 1), L, C
+    return jnp.array(x), jnp.array(y).reshape(-1, 1), L, C, alphabet, cons_seq
+
+
+def summary(samples, prob: Optional[float] = 0.95):
+    """
+    Compute sample statistics for the input samples.
+    """
+    site_stats = {}
+    site_stats = {
+        "mean": jnp.mean(samples, axis=0),
+        "hdpi": numpyro.diagnostics.hpdi(samples, prob),
+    }
+    return site_stats

@@ -1,6 +1,5 @@
 import time
 
-import jax.numpy as jnp
 import numpyro.optim as optim
 
 # jax imports
@@ -43,16 +42,10 @@ class fit:
             # Assign the learning rate
             learning_rate = getattr(args, "learning_rate", None)
             if learning_rate is None:
-                self.step_size = 1e-1
+                self.learning_rate = 1e-1
                 print("\nDefault Learning rate = 1e-1 is used")
             else:
-                self.step_size = learning_rate
-            # Assign Learning rate decay
-            learning_decay = getattr(args, "learning_decay", None)
-            if learning_decay is None:
-                self.learning_decay = None
-            else:
-                self.learning_decay = learning_decay
+                self.learning_rate = learning_rate
 
         # Progress bar. For large data, gpu, multiple chains sometimes bar make it slow
         progress_bar = getattr(args, "progress_bar", None)
@@ -84,22 +77,11 @@ class fit:
         print("\nTraining using Stochastic Variational Inference\n")
         start = time.time()
 
-        # Assign Autodelta Autoguide.
+        # Assign AutoNormal guide.
         guide = autoguide.AutoNormal(self.model, init_loc_fn=init_to_sample)
 
-        # Initial learning rate
-        step_size = self.step_size
-        init_lr = self.step_size
-
-        # Reduce learning rate based on the rate in learning decay for
-        # every 1000 epochs
-        if self.learning_decay is not None:
-
-            def step_size(i):
-                return init_lr * self.learning_decay ** jnp.floor(i / 1_000)
-
         # Define the optimizer
-        optimizer = optim.RMSProp(step_size=step_size)
+        optimizer = optim.Adam(self.learning_rate)
 
         # Loss function is the ELBO
         svi = SVI(self.model, guide, optimizer, loss=Trace_ELBO())

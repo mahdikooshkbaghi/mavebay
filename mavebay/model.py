@@ -44,7 +44,6 @@ class Model:
         ge_nonlinearity_type: Optional[str] = "nonlinear",
         ge_noise_model_type: Optional[str] = "Gaussian",
         seed: Optional[int] = 1234,
-        inference_method: Optional[str] = "svi",
     ):
 
         # Assign the sequence length.
@@ -65,18 +64,34 @@ class Model:
         self.ge_noise_model_type = ge_noise_model_type
         # Random seed
         self.seed = seed
-        # Inference Method
-        self.inference_method = inference_method
+        # Random number generator for jax. inference and prediction seeds
+        self.rng_infer, self.rng_predict = random.split(random.PRNGKey(self.seed))
 
-    def set_gp_params(self, x):
+    def set_gp_params(self, x: Optional[DeviceArray] = None):
         """
         Set the GP map parameters.
+        Parameters
+        ----------
+        x: (jax.numpy.DeviceArray)
+            One-hot encoded input sequences
         """
+        gp_params = {}
         if self.gpmap_type == "additive":
             theta_0, theta_lc, phi = additive_gp_map(self.L, self.C, x)
-        return theta_0, theta_lc, phi
+            gp_params["theta_0"] = theta_0
+            gp_params["theta_lc"] = theta_lc
+            gp_params["phi"] = phi
 
-    def set_ge_params(self):
+        return gp_params
+
+    def set_mp_params(self):
+        """
+        Set measurement process parameters.
+        Returns
+        ----------
+        g: (jax.numpy.DeviceArray):
+            The noiseless predictions of the model. g=MP(phi)
+        """
         if self.regression_type == "GE":
             g = ge_measurement(
                 self.ge_hidden_nodes, self.phi, self.ge_nonlinearity_type
@@ -84,29 +99,40 @@ class Model:
         return g
 
     def model(self, x: DeviceArray = None, y: DeviceArray = None):
-        self.theta_0, self.theta_lc, self.phi = self.set_gp_params(x)
+
+        # Get the gp parameters
+        self.gp_params = self.set_gp_params(x)
+        self.phi = self.gp_params["phi"]
         if y is not None:
             assert (
                 self.phi.shape == y.shape
             ), f"phi has shape {self.phi.shape}, y has shape {y.shape}"
-        self.g = self.set_ge_params()
+        self.g = self.set_mp_params()
 
         noise = numpyro.sample("noise", dist.Gamma(3.0, 1.0))
         # self.alpha, self.beta, noise = self.noise_model(self.ge_noise_model_type)
         sigma_obs = 1.0 / jnp.sqrt(noise)
         return numpyro.sample("yhat", dist.Normal(self.g, sigma_obs).to_event(1), obs=y)
 
-    def fit(
-        self, fit_args, x: DeviceArray, y: DeviceArray, rng_key: Optional[int] = None
-    ):
-        rng_key, _ = random.split(random.PRNGKey(self.seed))
-        if self.inference_method == "svi":
+    def fit(self, fit_args, x: DeviceArray, y: DeviceArray):
+        # Assign the fitting method to the model
+        self.fit_method = fit_args.method
+        # Variational inference
+        if self.fit_method == "svi":
             self.guide, self.svi_results = fit(
-                rng_key=rng_key, args=fit_args, model=self.model
+                rng_key=self.rng_infer, args=fit_args, model=self.model
             ).svi(x=x, y=y)
-            return self.guide, self.svi_results
-        # if args.method == "mcmc":
-        # self.trace = fit(args=args, rng_key=rng_key, model=self.model).mcmc(
-        # x=x, y=y
-        # )
-        # return self.trace
+        # MCMC with NUTS inference
+        if fit_args.method == "mcmc":
+            self.trace = fit(
+                args=fit_args, rng_key=self.rng_infer, model=self.model
+            ).mcmc(x=x, y=y)
+
+    def sample_posterior(self, num_samples: Optional[int] = 1000):
+        """
+        Sample from posterior.
+        """
+        if self.fit_method == "svi":
+            self.posteriors = self.guide.sample_posterior(
+                self.rng_predict, self.svi_results.params, sample_shape=(num_samples,)
+            )

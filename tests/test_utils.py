@@ -5,7 +5,7 @@ def test_load_dataset():
     """
     test loading dataset for Amyloid Beta returns correct shapes.
     """
-    x, y, L, C = utils.load_dataset(
+    x, y, L, C, alphabet, cons_seq = utils.load_dataset(
         filename="examples/datasets/amyloid_data.csv.gz",
         alphabet="protein*",
         verbose=False,
@@ -14,3 +14,5 @@ def test_load_dataset():
     assert y.shape == (16066, 1)
     assert L == 42
     assert C == 21
+    assert alphabet == "protein*"
+    assert cons_seq == "DAEFRHDSGYEVHHQKLVFFAEDVGSNKGAIIGLMVGGVVIA"
