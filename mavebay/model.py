@@ -1,14 +1,15 @@
 from typing import Optional
 
-import jax.numpy as jnp
 import jax.random as random
 import numpyro
 import numpyro.distributions as dist
 from jax.numpy import DeviceArray
+from numpyro.infer import Predictive
 
 from .gpmaps import additive_gp_map
 from .infer import fit
 from .measurements import ge_measurement
+from .utils import summary
 
 
 class Model:
@@ -108,11 +109,11 @@ class Model:
                 self.phi.shape == y.shape
             ), f"phi has shape {self.phi.shape}, y has shape {y.shape}"
         self.g = self.set_mp_params()
+        self.sigma = numpyro.sample("sigma", dist.HalfNormal())
 
-        noise = numpyro.sample("noise", dist.Gamma(3.0, 1.0))
-        # self.alpha, self.beta, noise = self.noise_model(self.ge_noise_model_type)
-        sigma_obs = 1.0 / jnp.sqrt(noise)
-        return numpyro.sample("yhat", dist.Normal(self.g, sigma_obs).to_event(1), obs=y)
+        return numpyro.sample(
+            "yhat", dist.Normal(self.g, self.sigma).to_event(1), obs=y
+        )
 
     def fit(self, fit_args, x: DeviceArray, y: DeviceArray):
         # Assign the fitting method to the model
@@ -136,3 +137,23 @@ class Model:
             self.posteriors = self.guide.sample_posterior(
                 self.rng_predict, self.svi_results.params, sample_shape=(num_samples,)
             )
+
+    def ppc(
+        self,
+        num_samples: Optional[int] = 1000,
+        x: DeviceArray = None,
+        prob: Optional[float] = 0.95,
+    ):
+        """
+        Assign the posterior predictive object to the model
+        """
+        self.posterior_predictive = Predictive(
+            model=self.model,
+            guide=self.guide,
+            params=self.svi_results.params,
+            num_samples=num_samples,
+        )
+
+        posterior_predictions = self.posterior_predictive(self.rng_predict, x=x)
+        yhat = summary(posterior_predictions["yhat"], prob)
+        return yhat
