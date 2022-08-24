@@ -1,5 +1,6 @@
 from typing import Optional
 
+import jax.numpy as jnp
 import jax.random as random
 import numpyro
 import numpyro.distributions as dist
@@ -30,7 +31,7 @@ class Model:
     gpmap_kwargs: dict():
         The GP-map keywords input as dictionary.
     ge_noise_model_type: (str)
-        Specifies the type of global epistasis noise model.
+        Specifies the type of noise prior.
         The possible choice for now: 'Gaussian'
     """
 
@@ -38,6 +39,7 @@ class Model:
         self,
         L: int,
         C: int,
+        alphabet: str,
         regression_type: Optional[str] = "GE",
         gpmap_type: Optional[str] = "additive",
         gpmap_kwargs: Optional[dict] = None,
@@ -51,6 +53,8 @@ class Model:
         self.L = L
         # Assign the alphabet length.
         self.C = C
+        # Assign the alphabet
+        self.alphabet = alphabet
         # Assign the regression type
         self.regression_type = regression_type
         # Assign the gpmap type
@@ -85,7 +89,7 @@ class Model:
 
         return gp_params
 
-    def set_mp_params(self):
+    def set_mp_params(self, phi):
         """
         Set measurement process parameters.
         Returns
@@ -94,44 +98,60 @@ class Model:
             The noiseless predictions of the model. g=MP(phi)
         """
         if self.regression_type == "GE":
-            g = ge_measurement(
-                self.ge_hidden_nodes, self.phi, self.ge_nonlinearity_type
-            )
+            g = ge_measurement(self.ge_hidden_nodes, phi, self.ge_nonlinearity_type)
         return g
 
-    def model(self, x: DeviceArray = None, y: DeviceArray = None):
+    def model(
+        self, x: DeviceArray = None, y: DeviceArray = None, phi: DeviceArray = None
+    ):
 
         # Get the gp parameters
-        self.gp_params = self.set_gp_params(x)
-        self.phi = self.gp_params["phi"]
+        if x is not None:
+            self.gp_params = self.set_gp_params(x)
+        if phi is None:
+            phi = self.gp_params["phi"]
+            self.phi = phi
+        else:
+            phi = phi[..., jnp.newaxis]
         if y is not None:
             assert (
                 self.phi.shape == y.shape
             ), f"phi has shape {self.phi.shape}, y has shape {y.shape}"
-        self.g = self.set_mp_params()
-        self.sigma = numpyro.sample("sigma", dist.HalfNormal())
+        g = self.set_mp_params(phi)
+        if self.ge_noise_model_type == "Gaussian":
+            self.sigma = numpyro.sample("sigma", dist.HalfNormal())
 
-        return numpyro.sample(
-            "yhat", dist.Normal(self.g, self.sigma).to_event(1), obs=y
-        )
+        return numpyro.sample("yhat", dist.Normal(g, self.sigma).to_event(1), obs=y)
 
-    def fit(self, fit_args, x: DeviceArray, y: DeviceArray):
+    def fit(self, fit_args=None, x: DeviceArray = None, y: DeviceArray = None):
         # Assign the fitting method to the model
-        self.fit_method = fit_args.method
+        if fit_args is None:
+            self.fit_method = "svi"
+        else:
+            if hasattr(fit_args, "method"):
+                self.fit_method = fit_args.method
+            else:
+                self.fit_method = "svi"
         # Variational inference
         if self.fit_method == "svi":
             self.guide, self.svi_results = fit(
                 rng_key=self.rng_infer, args=fit_args, model=self.model
             ).svi(x=x, y=y)
         # MCMC with NUTS inference
-        if fit_args.method == "mcmc":
+        if self.fit_method == "mcmc":
             self.trace = fit(
                 args=fit_args, rng_key=self.rng_infer, model=self.model
             ).mcmc(x=x, y=y)
 
     def sample_posterior(self, num_samples: Optional[int] = 1000):
         """
-        Sample from posterior.
+        Sample from parameters posteriors.
+        Assign the posterior attribute to the model.
+        Parameters
+        ----------
+        num_samples: Optional (int)
+            number of samples draws from posterior for the infer parameters.
+            Default = 1000
         """
         if self.fit_method == "svi":
             self.posteriors = self.guide.sample_posterior(
@@ -140,12 +160,29 @@ class Model:
 
     def ppc(
         self,
-        num_samples: Optional[int] = 1000,
         x: DeviceArray = None,
+        num_samples: Optional[int] = 1000,
         prob: Optional[float] = 0.95,
     ):
         """
-        Assign the posterior predictive object to the model
+        Sample from predictions posteriors.
+
+        Parameters
+        ----------
+        x: (DeviceArray)
+            the one-hot encoded sequences
+        num_samples: Optional (int)
+            number of samples draws from posterior for the prediction.
+            Default = 1000
+        prob: (float)
+            the confidence interval probability.
+            Default = 0.95: 95% hdpi.
+        Returns
+        ----------
+        yhat: (DeviceArray)
+            The mean and hdpi model predictions for the measurements for input x.
+        phi: (DeviceArray)
+            The mean and hdpi of latent phenotype values for input x.
         """
         self.posterior_predictive = Predictive(
             model=self.model,
@@ -156,4 +193,19 @@ class Model:
 
         posterior_predictions = self.posterior_predictive(self.rng_predict, x=x)
         yhat = summary(posterior_predictions["yhat"], prob)
-        return yhat
+        phi = summary(posterior_predictions["phi"], prob)
+        return yhat, phi
+
+    def phi_to_yhat(self, phi: DeviceArray = None, prob: float = 0.95):
+        """
+        get the model prediction yhat for the given phi.
+        good for plot the smooth measurement process.
+
+        Parameters
+        ----------
+        phi: (DeviceArray)
+        """
+
+        return summary(
+            self.posterior_predictive(self.rng_predict, phi=phi)["yhat"], prob
+        )

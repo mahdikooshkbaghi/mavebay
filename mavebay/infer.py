@@ -8,51 +8,50 @@ from numpyro.infer import MCMC, NUTS, SVI, Trace_ELBO, autoguide, init_to_sample
 
 
 class fit:
-    def __init__(self, args, rng_key, model: DeviceArray = None):
+    def __init__(self, rng_key, args=None, model: DeviceArray = None):
+
+        default_dict = {
+            "method": "svi",
+            "num_samples": 1000,
+            "learning_rate": 1e-2,
+            "progress_bar": True,
+        }
 
         self.rng_key = rng_key
         self.model = model
 
-        error_samp = (
-            "number of samples for mcmc/svi inference should be provided as args"
-        )
+        # Assign the inference method
+        if hasattr(args, "method"):
+            self.method = args.method
+        else:
+            self.method = default_dict["method"]
+            print("User did not provide the inference method in fitting args")
+            print(f"Default method of inference is set to {self.method}")
+
         # Assign number of samples for inference.
-        assert args.num_samples is not None, error_samp
-        self.num_samples = args.num_samples
+        if hasattr(args, "num_samples"):
+            self.num_samples = args.num_samples
+        else:
+            self.num_samples = default_dict["num_samples"]
+            print("User did not provide num_samples in fitting args")
+            print(f"Default Number of samples is set to {self.num_samples}")
 
-        # Assign parameters for the MCMC inference
-        if args.method == "mcmc":
-            error_warm = (
-                "number of warmup steps for mcmc inference should be provided as args"
-            )
-            error_chain = (
-                "number of chains for mcmc inference should be provided as args"
-            )
-
-            # Assign number of warmup steps for MCMC inference.
-            assert args.num_warmup is not None, error_warm
-            self.num_warmup = args.num_warmup
-
-            # Assign number of chains for MCMC inference.
-            assert args.num_chains is not None, error_chain
-            self.num_chains = args.num_chains
-
-        # Assign parameters for the SVI inference.
-        if args.method == "svi":
-            # Assign the learning rate
-            learning_rate = getattr(args, "learning_rate", None)
-            if learning_rate is None:
-                self.learning_rate = 1e-1
-                print("\nDefault Learning rate = 1e-1 is used")
+        # Assign the learning rate for SVI
+        if self.method == "svi":
+            if hasattr(args, "learning_rate"):
+                self.learning_rate = args.learning_rate
             else:
-                self.learning_rate = learning_rate
+                self.learning_rate = default_dict["learning_rate"]
+                print("User did not provide learning rate for SVI in fitting args")
+                print(f"Default learning rate is set to {self.learning_rate}")
 
         # Progress bar. For large data, gpu, multiple chains sometimes bar make it slow
-        progress_bar = getattr(args, "progress_bar", None)
-        if progress_bar is None:
-            self.progress_bar = True
-        else:
+        if hasattr(args, "progress_bar"):
             self.progress_bar = args.progress_bar
+        else:
+            self.progress_bar = default_dict["progress_bar"]
+            print("User did not provide progress_bar status in fitting args")
+            print(f"Default progress bar is set to {self.progress_bar}")
 
     def svi(self, x: DeviceArray, y: DeviceArray):
         """
@@ -74,7 +73,12 @@ class fit:
             Stochastic Variational Inference Result.
         """
 
-        print("\nTraining using Stochastic Variational Inference\n")
+        print("\nTraining using Stochastic Variational Inference")
+        print("Training parameters are:")
+        print(f"Learning Rate: {self.learning_rate}")
+        print(f"Number of SVI steps: {self.num_samples}")
+        print(f"Progress bar: {self.progress_bar}\n")
+
         start = time.time()
 
         # Assign AutoNormal guide.
