@@ -1,47 +1,45 @@
 from dataclasses import dataclass
 
+import numpy as np
 import numpyro
 
-from mavebay import model, utils
+import mavebay
 
 
-# Define the fitting arguments
+# Fitting method and parameters
 @dataclass
 class fit_args:
-    num_chains = 4
-    num_samples = 10
-    num_warmup = 10
-    learning_rate = 1e-3
+    num_samples = 10_000
+    learning_rate = 1e-2
     device = "cpu"
-    # if jax is installed with GPU support can be either cpu and gpu
-    method = "svi"
-    # svi: Stochastic variational inference
-    # mcmc: MonteCarlo with NUTS
     progress_bar = True
+    method = "svi"
 
 
-# Set the device and number of chains (CPUs) in case of the mcmc inference
-numpyro.set_platform(fit_args.device)
-numpyro.set_host_device_count(fit_args.num_chains)
+# Set numpyro number of cpus and devices
+if hasattr(fit_args, "num_chains"):
+    numpyro.set_host_device_count(fit_args.num_chains)
+if hasattr(fit_args, "device"):
+    numpyro.set_platform(fit_args.device)
+else:
+    numpyro.set_platform("cpu")
 
-# Read the pandas dataframe of the datasets: MAVENN builtin dataset
-x, y, L, C = utils.load_dataset(
+
+# Get the dataset
+x, y, L, C, alphabet, cons_seq = mavebay.utils.load_dataset(
     filename="./datasets/amyloid_data.csv.gz", alphabet="protein*"
 )
 
 # Define the Model
-mavebay_model = model.Model(
-    L,
-    C,
-    regression_type="GE",
-    gpmap_type="additive",
-    ge_hidden_nodes=20,
-    ge_nonlinearity_type="nonlinear",
-    ge_noise_model_type="Gaussian",
-    seed=1234,
-)
+model = mavebay.model.Model(L=L, C=C, alphabet="protein*")
 
-# Fit the model
-svi_guide, svi_results = mavebay_model.fit(fit_args, x=x, y=y)
+# fit the model
+model.fit(fit_args, x=x, y=y)
 
-print(svi_results)
+# Get the model posterior prediction mean and hdi for x sequences
+yhat, phi = model.ppc(num_samples=100, x=x, prob=0.95)
+
+# Get the smooth measurement process for range of phi
+phi_r = np.linspace(-10, 10, 1000)
+prob = 0.95
+phi_yhat = model.phi_to_yhat(phi=phi_r, prob=prob)
