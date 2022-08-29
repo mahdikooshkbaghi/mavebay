@@ -14,6 +14,8 @@ class fit:
             "method": "svi",
             "num_samples": 1000,
             "learning_rate": 1e-2,
+            "num_warmup": 1000,
+            "num_chains": 4,
             "progress_bar": True,
         }
 
@@ -44,6 +46,24 @@ class fit:
                 self.learning_rate = default_dict["learning_rate"]
                 print("User did not provide learning rate for SVI in fitting args")
                 print(f"Default learning rate is set to {self.learning_rate}")
+
+        if self.method == "mcmc":
+            # Assign the warm-up steps for MCMC inference
+            if hasattr(args, "num_warmup"):
+                self.num_warmup = args.num_warmup
+            else:
+                self.num_warmup = default_dict["num_warmup"]
+                print("User did not provide number of warm-up mcmc in fitting args")
+                print(f"Default number of warmup is set to {self.num_warmup}")
+            # Assign the number of chains for MCMC inference
+            if hasattr(args, "num_chains"):
+                self.num_chains = args.num_chains
+            else:
+                self.num_chains = default_dict["num_chains"]
+                print("User did not provide number of chains for mcmc in fitting args")
+                print(f"Default number of chains is set to {self.num_chains}")
+                print("Note: numpyro.set_host_device_count(num_chains)")
+                print("should be fixed in the beginning of the training script!")
 
         # Progress bar. For large data, gpu, multiple chains sometimes bar make it slow
         if hasattr(args, "progress_bar"):
@@ -101,8 +121,30 @@ class fit:
         print("\nVariational inference elapsed time:", time.time() - start)
         return guide, svi_results
 
-    def mcmc(self, x, y):
-        print("\nTraining using MCMC\n")
+    def mcmc(self, x: DeviceArray, y: DeviceArray):
+        """
+        Markov Chain Monte Carlo (MCMC) inference using
+        No U-Turn Sampler (NUTS).
+
+        Parameters
+        ----------
+        x: (DeviceArray):
+            Input features for training.
+        y: (DeviceArray):
+            Output (measurements) for training.
+
+        Returns
+        -------
+        trace: (numpyro.infer.mcmc)
+        """
+
+        print("\nTraining using MCMC with NUTS")
+        print("Training parameters are:")
+        print(f"Number of MCMC steps: {self.num_samples}")
+        print(f"Number of warm-up steps: {self.num_warmup}")
+        print(f"Number of chains: {self.num_chains}")
+        print(f"Progress bar: {self.progress_bar}\n")
+
         start = time.time()
         # define kernel
         kernel = NUTS(model=self.model)
@@ -113,6 +155,7 @@ class fit:
             num_samples=self.num_samples,
             num_chains=self.num_chains,
             progress_bar=self.progress_bar,
+            jit_model_args=True,
         )
         # run mcmc inference
         mcmc.run(self.rng_key, x=x, y=y)

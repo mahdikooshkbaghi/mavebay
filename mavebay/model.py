@@ -102,7 +102,11 @@ class Model:
         return g
 
     def model(
-        self, x: DeviceArray = None, y: DeviceArray = None, phi: DeviceArray = None
+        self,
+        x: DeviceArray = None,
+        y: DeviceArray = None,
+        phi: DeviceArray = None,
+        batch_size: int = None,
     ):
 
         # Get the gp parameters
@@ -126,6 +130,7 @@ class Model:
     def fit(self, fit_args=None, x: DeviceArray = None, y: DeviceArray = None):
         # Assign the fitting method to the model
         if fit_args is None:
+            # Default method is stochastic variational inference
             self.fit_method = "svi"
         else:
             if hasattr(fit_args, "method"):
@@ -157,6 +162,11 @@ class Model:
             self.posteriors = self.guide.sample_posterior(
                 self.rng_predict, self.svi_results.params, sample_shape=(num_samples,)
             )
+        if self.fit_method == "mcmc":
+            self.posteriors = Predictive(
+                model=self.model,
+                posterior_samples=self.trace.get_samples(),
+            ).posterior_samples
 
     def ppc(
         self,
@@ -184,12 +194,18 @@ class Model:
         phi: (DeviceArray)
             The mean and hdpi of latent phenotype values for input x.
         """
-        self.posterior_predictive = Predictive(
-            model=self.model,
-            guide=self.guide,
-            params=self.svi_results.params,
-            num_samples=num_samples,
-        )
+        if self.fit_method == "svi":
+            self.posterior_predictive = Predictive(
+                model=self.model,
+                guide=self.guide,
+                params=self.svi_results.params,
+                num_samples=num_samples,
+            )
+        elif self.fit_method == "mcmc":
+            self.posterior_predictive = Predictive(
+                model=self.model,
+                posterior_samples=self.trace.get_samples(),
+            )
 
         posterior_predictions = self.posterior_predictive(self.rng_predict, x=x)
         yhat = summary(posterior_predictions["yhat"], prob)
