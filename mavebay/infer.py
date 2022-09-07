@@ -4,7 +4,7 @@ import numpyro.optim as optim
 
 # jax imports
 from jax.numpy import DeviceArray
-from numpyro.infer import MCMC, NUTS, SVI, Trace_ELBO, autoguide, init_to_sample
+from numpyro.infer import MCMC, NUTS, SVI, Trace_ELBO, autoguide, init_to_feasible
 
 
 class fit:
@@ -102,7 +102,7 @@ class fit:
         start = time.time()
 
         # Assign AutoNormal guide.
-        guide = autoguide.AutoNormal(self.model, init_loc_fn=init_to_sample)
+        guide = autoguide.AutoNormal(self.model, init_loc_fn=init_to_feasible)
 
         # Define the optimizer
         optimizer = optim.Adam(self.learning_rate)

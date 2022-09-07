@@ -7,7 +7,7 @@ import numpyro.distributions as dist
 from jax.numpy import DeviceArray
 from numpyro.infer import Predictive
 
-from .gpmaps import additive_gp_map
+from .gpmaps import KOrderGPMap, additive_gp_map
 from .infer import fit
 from .measurements import ge_measurement
 from .utils import summary
@@ -82,10 +82,12 @@ class Model:
         """
         gp_params = {}
         if self.gpmap_type == "additive":
-            theta_0, theta_lc, phi = additive_gp_map(self.L, self.C, x)
-            gp_params["theta_0"] = theta_0
-            gp_params["theta_lc"] = theta_lc
-            gp_params["phi"] = phi
+            theta_dict, phi = additive_gp_map(self.L, self.C, x)
+        if self.gpmap_type == "kth_order":
+            theta_dict, phi = KOrderGPMap(self.L, self.C, x)
+
+        gp_params["theta_dict"] = theta_dict
+        gp_params["phi"] = phi
 
         return gp_params
 
@@ -122,6 +124,10 @@ class Model:
                 self.phi.shape == y.shape
             ), f"phi has shape {self.phi.shape}, y has shape {y.shape}"
         g = self.set_mp_params(phi)
+
+        if y is not None:
+            assert g.shape == y.shape, f"g has shape {g.shape}, y has shape {y.shape}"
+
         if self.ge_noise_model_type == "Gaussian":
             self.sigma = numpyro.sample("sigma", dist.HalfNormal())
 
