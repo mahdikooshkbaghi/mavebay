@@ -11,8 +11,8 @@ git clone git@github.com:mahdikooshkbaghi/mavebay.git
 cd mavebay
 python -m venv test_mavebay
 source test_mavebay/bin/activate
-pip install "mavebay"
-pip install "mavebay[examples]"
+pip install . "mavebay"
+pip install . "mavebay[examples]"
 ```
 
 

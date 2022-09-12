@@ -41,7 +41,7 @@ jobs:
       - name: Download dependencies
         if: steps.depcache.outputs.cache-hit != 'true'
         run: |
-          pip download --dest=deps -r requirements.txt
+          pip download --dest=deps . "mavebay"
 
       - name: Install dependencies
         run: |
