@@ -1,5 +1,21 @@
 [![Build](https://github.com/mahdikooshkbaghi/mavebay/actions/workflows/main.yaml/badge.svg)](https://github.com/mahdikooshkbaghi/mavebay/actions/workflows/main.yaml)
 
+# Installation
+
+1. Clone the repo.
+2. Create the virtual environment.
+3. Install the mavebay and optinionally required packages for the examples.
+
+```bash
+git clone git@github.com:mahdikooshkbaghi/mavebay.git
+cd mavebay
+python -m venv test_mavebay
+source test_mavebay/bin/activate
+pip install "mavebay"
+pip install "mavebay[examples]"
+```
+
+
 # TODO list for MAVEBAY
 Bayesian Version of MAVENN1.0
 
