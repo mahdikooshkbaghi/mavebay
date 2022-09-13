@@ -64,12 +64,13 @@ setup(
         "zipp==3.8.1",
     ],
     include_package_data=True,
-    extras_require={  # To install additional packages for examples  "pip install mavebay[examples]"
+    extras_require={  # To install additional packages for examples  pip install . "mavebay[examples]"
         "examples": [  # Requirements only for examples not the base code.
             "arviz",
             "jupyter",
             "matplotlib",
             "seaborn",
+            "logomaker",
         ],
     },
 )

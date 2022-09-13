@@ -20,13 +20,14 @@ pip install . "mavebay[examples]"
 Bayesian Version of MAVENN1.0
 
 - [x] The SVI is working both on the abeta and TDP-43 additive inferences.
-- [ ] The MCMC on the abeta is working only on small samples.
+- [x] The MCMC on the abeta is working only on small samples.
 - [ ] Need to figure out the batch and plate. 
-- [ ] Need to modify the `setup.py` to have additional python requirements for the example folder. Check the numpyro github repo for hint.
+- [x] Need to modify the `setup.py` to have additional python requirements for the example folder. Check the numpyro github repo for hint.
 - [ ] Implementing the skewed-T noise model similar to one we have in MAVENN.
 - [ ] K-th order interaction GP map implementation.
-    - [x] The K-th=1: which is practically an additive model is working.
+    - [x] The K-th=1: which is practically an additive model and it is working.
 - [ ] Measurement process agnostic (MPA) implementation.
+- [x] Need to add different initialization strategy for SVI sampling with default being `init_to_feasible`
 
 
 ## Mathematical explanation for some of TODO items.

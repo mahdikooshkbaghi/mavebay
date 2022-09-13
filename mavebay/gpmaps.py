@@ -24,11 +24,41 @@ def additive_gp_map(L, C, x_lc):
     return theta_dict, phi
 
 
-def KOrderGPMap(L, C, x_lc, K=1):
+def KOrderGPMap(L, C, x_lc, **kwargs):
     """
-    Kth order GPmap
+    Represent the K-th order GP-map.
+
+    Note
+    ----------
+    The interaction order should be specified in gpmap_kwargs
+    dictionary when the user defined the model e.g.,
+    gpmap_kwargs["interaction_order"] = 2.
+    Otherwise the default value is `interaction_order=1`,
+    corresponding to the additive gp_map.
+
+    Parameters
+    ----------
+    L (int):
+        The length of the sequence.
+    C (int):
+        The number of characters for one-hot encoding the sequence.
+    x: (jax.numpy.DeviceArray)
+        One-hot encoded input sequences
+
+    Returns
+    -------
+    theta_dict: (dict)
+        Dictionary containing GP-map parameters.
+    phi: (jax.numpy.DeviceArray)
+        Latent phenotype for the x sequences.
     """
-    assert L >= K, f"Interaction order {K}, should be less than seq length {L}"
+
+    # If the interaction order is not defined
+    # the default is 1 corresponding to the additive model
+    interaction_order = kwargs.get("interaction_order", 1)
+    assert (
+        L >= interaction_order
+    ), f"Interaction order {interaction_order}, should be less than seq length {L}"
 
     # Initialize the GP params dictionary
     theta_dict = {}
@@ -43,7 +73,7 @@ def KOrderGPMap(L, C, x_lc, K=1):
     phi_val = theta_dict["theta_0"]
 
     # Loop over interaction order
-    for k in range(K):
+    for k in range(interaction_order):
         theta_name = f"theta_{k+1}"
         theta_shape = theta_shape + (L, C)
         # Sample the Kth interaction theta values

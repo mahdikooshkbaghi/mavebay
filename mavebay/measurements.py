@@ -12,6 +12,8 @@ def nonlinear_f(ge_nonlinearity_type: Optional[str] = "nonlinear", x=None):
     """
     if ge_nonlinearity_type == "nonlinear":
         return jnp.tanh(x)
+    if ge_nonlinearity_type == "linear":
+        return x
 
 
 def ge_measurement(
@@ -30,3 +32,32 @@ def ge_measurement(
     g = g[..., jnp.newaxis]
 
     return g
+
+
+# def mpa_measurement(Y, K, phi):
+#     """
+#     Y (int):
+#         number of bins.
+#     K
+#     """
+
+#     # MPA parameters
+#     a = numpyro.sample("a", dist.Normal(jnp.zeros((Y, K)), jnp.ones((Y, K))))
+#     b = numpyro.sample("b", dist.Normal(jnp.zeros((Y, K)), jnp.ones((Y, K))))
+#     c = numpyro.sample("c", dist.Normal(jnp.zeros((Y, K)), jnp.ones((Y, K))))
+#     d = numpyro.sample("d", dist.Normal(jnp.zeros((Y, K)), jnp.ones((Y, K))))
+
+#     ct_my = inputs[:, 1:]
+#     # Compute p(y|phi)
+#     # Compute weights
+#     psi_my = a + jnp.sum(b * tanh(c_yk * phi + d_yk), axis=2)
+#     psi_my = tf.reshape(psi_my, [-1, self.Y])
+#     w_my = Exp(psi_my)
+
+#         # Compute and return distribution
+#         p_my = w_my / tf.reshape(K.sum(w_my, axis=1), [-1, 1])
+
+
+#     p_my = self.p_of_all_y_given_phi(phi)
+#     # Compute negative log likelihood
+#     negative_log_likelihood = -K.sum(ct_my * jnp.log(p_my), axis=1)

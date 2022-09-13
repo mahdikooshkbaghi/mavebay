@@ -1,10 +1,11 @@
 import time
 
+import numpyro.infer as infer
 import numpyro.optim as optim
 
 # jax imports
 from jax.numpy import DeviceArray
-from numpyro.infer import MCMC, NUTS, SVI, Trace_ELBO, autoguide, init_to_feasible
+from numpyro.infer import MCMC, NUTS, SVI, Trace_ELBO, autoguide
 
 
 class fit:
@@ -16,6 +17,7 @@ class fit:
             "learning_rate": 1e-2,
             "num_warmup": 1000,
             "num_chains": 4,
+            "init_loc_fn": "feasible",
             "progress_bar": True,
         }
 
@@ -46,6 +48,14 @@ class fit:
                 self.learning_rate = default_dict["learning_rate"]
                 print("User did not provide learning rate for SVI in fitting args")
                 print(f"Default learning rate is set to {self.learning_rate}")
+            if hasattr(args, "init_loc_fn"):
+                init_fn = "init_to_" + str(args.init_loc_fn)
+                self.init_loc_fn = getattr(infer, init_fn)()
+            else:
+                init_fn = "init_to_" + str(default_dict["init_loc_fn"])
+                self.init_loc_fn = getattr(infer, init_fn)()
+                print("User did not provide initialization for SVI in fitting args")
+                print(f"Default initialization is set to {init_fn}")
 
         if self.method == "mcmc":
             # Assign the warm-up steps for MCMC inference
@@ -97,12 +107,13 @@ class fit:
         print("Training parameters are:")
         print(f"Learning Rate: {self.learning_rate}")
         print(f"Number of SVI steps: {self.num_samples}")
+        print(f"Initialization: {self.init_loc_fn}")
         print(f"Progress bar: {self.progress_bar}\n")
 
         start = time.time()
 
         # Assign AutoNormal guide.
-        guide = autoguide.AutoNormal(self.model, init_loc_fn=init_to_feasible)
+        guide = autoguide.AutoNormal(self.model, init_loc_fn=self.init_loc_fn)
 
         # Define the optimizer
         optimizer = optim.Adam(self.learning_rate)

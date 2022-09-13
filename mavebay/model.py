@@ -84,7 +84,7 @@ class Model:
         if self.gpmap_type == "additive":
             theta_dict, phi = additive_gp_map(self.L, self.C, x)
         if self.gpmap_type == "kth_order":
-            theta_dict, phi = KOrderGPMap(self.L, self.C, x)
+            theta_dict, phi = KOrderGPMap(self.L, self.C, x, **self.gpmap_kwargs)
 
         gp_params["theta_dict"] = theta_dict
         gp_params["phi"] = phi
@@ -185,7 +185,7 @@ class Model:
 
         Parameters
         ----------
-        x: (DeviceArray)
+        x: (jax.numpy.DeviceArray)
             the one-hot encoded sequences
         num_samples: Optional (int)
             number of samples draws from posterior for the prediction.
@@ -195,9 +195,9 @@ class Model:
             Default = 0.95: 95% hdpi.
         Returns
         ----------
-        yhat: (DeviceArray)
+        yhat: (jax.numpy.DeviceArray)
             The mean and hdpi model predictions for the measurements for input x.
-        phi: (DeviceArray)
+        phi: (jax.numpy.DeviceArray)
             The mean and hdpi of latent phenotype values for input x.
         """
         if self.fit_method == "svi":
@@ -225,7 +225,7 @@ class Model:
 
         Parameters
         ----------
-        phi: (DeviceArray)
+        phi: (jax.numpy.DeviceArray)
         """
 
         return summary(
