@@ -29,6 +29,13 @@ Bayesian Version of MAVENN1.0
     - [x] The K-th=2: which is practically pairwise works on mpsa data.
 - [ ] Measurement process agnostic (MPA) implementation.
 - [x] Need to add different initialization strategy for SVI sampling with default being `init_to_feasible`
+- [ ] Saving the model:
+    - [ ] SVI
+    - [ ] MCMC
+- [ ] Make the ppc smooth.
+- [ ] Put the MAVENN heatmap and pairwise to utils function
+- [ ] Information metrics calculation.
+
 
 
 ## Mathematical explanation for some of TODO items.
