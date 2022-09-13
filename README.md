@@ -24,8 +24,9 @@ Bayesian Version of MAVENN1.0
 - [ ] Need to figure out the batch and plate. 
 - [x] Need to modify the `setup.py` to have additional python requirements for the example folder. Check the numpyro github repo for hint.
 - [ ] Implementing the skewed-T noise model similar to one we have in MAVENN.
-- [ ] K-th order interaction GP map implementation.
+- [x] K-th order interaction GP map implementation.
     - [x] The K-th=1: which is practically an additive model and it is working.
+    - [x] The K-th=2: which is practically pairwise works on mpsa data.
 - [ ] Measurement process agnostic (MPA) implementation.
 - [x] Need to add different initialization strategy for SVI sampling with default being `init_to_feasible`
 

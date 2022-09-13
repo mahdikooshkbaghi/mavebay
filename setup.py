@@ -40,7 +40,7 @@ setup(
         "mccabe==0.7.0",
         "multipledispatch==0.6.0",
         "mypy-extensions==0.4.3",
-        "numpy==1.23.1",
+        "numpy>=1.21.0",
         "numpyro==0.10.0",
         "opt-einsum==3.3.0",
         "packaging==21.3",
