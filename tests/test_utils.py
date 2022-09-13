@@ -6,7 +6,7 @@ def test_load_dataset():
     test loading dataset for Amyloid Beta returns correct shapes.
     """
     x, y, L, C, alphabet, cons_seq = utils.load_dataset(
-        filename="examples/datasets/amyloid_data.csv.gz",
+        filename="https://github.com/jbkinney/mavenn/raw/master/mavenn/examples/datasets/amyloid_data.csv.gz",  # noqa
         alphabet="protein*",
         verbose=False,
     )
