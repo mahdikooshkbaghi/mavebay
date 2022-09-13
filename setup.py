@@ -44,7 +44,7 @@ setup(
         "numpyro==0.10.0",
         "opt-einsum==3.3.0",
         "packaging==21.3",
-        "pandas==1.4.3",
+        "pandas>=1.3.0",
         "pathspec==0.9.0",
         "platformdirs==2.5.2",
         "pluggy==1.0.0",
