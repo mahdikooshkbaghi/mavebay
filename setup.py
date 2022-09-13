@@ -56,7 +56,7 @@ setup(
         "pytest-cov==3.0.0",
         "python-dateutil==2.8.2",
         "pytz==2022.2.1",
-        "scipy==1.9.0",
+        "scipy>=1.7.0",
         "six==1.16.0",
         "tomli==2.0.1",
         "tqdm==4.64.0",
