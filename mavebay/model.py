@@ -1,5 +1,6 @@
 from typing import Optional
 
+import jax
 import jax.numpy as jnp
 import jax.random as random
 import numpyro
@@ -154,7 +155,7 @@ class Model:
                 args=fit_args, rng_key=self.rng_infer, model=self.model
             ).mcmc(x=x, y=y)
 
-    def sample_posterior(self, num_samples: Optional[int] = 1000):
+    def sample_params_posterior(self, num_samples: Optional[int] = 1000):
         """
         Sample from parameters posteriors.
         Assign the posterior attribute to the model.
@@ -177,7 +178,7 @@ class Model:
     def ppc(
         self,
         x: DeviceArray = None,
-        num_samples: Optional[int] = 1000,
+        num_samples: Optional[int] = 10_000,
         prob: Optional[float] = 0.95,
     ):
         """
@@ -213,12 +214,19 @@ class Model:
                 posterior_samples=self.trace.get_samples(),
             )
 
-        posterior_predictions = self.posterior_predictive(self.rng_predict, x=x)
-        yhat = summary(posterior_predictions["yhat"], prob)
-        phi = summary(posterior_predictions["phi"], prob)
+        posterior_predictions = jax.jit(self.posterior_predictive)(
+            self.rng_predict, x=x
+        )
+        yhat = jax.jit(summary)(posterior_predictions["yhat"], prob)
+        phi = jax.jit(summary)(posterior_predictions["phi"], prob)
         return yhat, phi
 
-    def phi_to_yhat(self, phi: DeviceArray = None, prob: float = 0.95):
+    def phi_to_yhat(
+        self,
+        phi: DeviceArray = None,
+        prob: Optional[float] = 0.95,
+        num_samples: Optional[int] = 10000,
+    ):
         """
         get the model prediction yhat for the given phi.
         good for plot the smooth measurement process.
@@ -227,7 +235,18 @@ class Model:
         ----------
         phi: (jax.numpy.DeviceArray)
         """
+        if self.fit_method == "svi":
+            posterior_predictive = Predictive(
+                model=self.model,
+                guide=self.guide,
+                params=self.svi_results.params,
+                num_samples=num_samples,
+            )
+        elif self.fit_method == "mcmc":
+            posterior_predictive = Predictive(
+                model=self.model,
+                posterior_samples=self.trace.get_samples(),
+            )
 
-        return summary(
-            self.posterior_predictive(self.rng_predict, phi=phi)["yhat"], prob
-        )
+        phi_yhat = jax.jit(posterior_predictive)(self.rng_predict, phi=phi)["yhat"]
+        return jax.jit(summary)(samples=phi_yhat, prob=0.95)

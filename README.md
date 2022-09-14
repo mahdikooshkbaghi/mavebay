@@ -32,7 +32,8 @@ Bayesian Version of MAVENN1.0
 - [ ] Saving the model:
     - [ ] SVI
     - [ ] MCMC
-- [ ] Make the ppc smooth.
+- [x] Make the ppc smooth.
+    - [x] As I suspected the number of samples from posteriors were not enough to make the phi_to_yhat smooth. Increasing that fixed the issue.
 - [ ] Put the MAVENN heatmap and pairwise to utils function
 - [ ] Information metrics calculation.
 

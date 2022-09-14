@@ -38,7 +38,7 @@ def main(args):
     model.fit(args, x=x, y=y)
 
     # Get the model posterior prediction mean and hdi for x sequences
-    yhat, phi = model.ppc(num_samples=500, x=x, prob=0.95)
+    yhat, phi = model.ppc(num_samples=100, x=x, prob=0.95)
 
     # ELBO loss, measurements vs predictions, y-phi space plots
     fig, axs = plt.subplots(1, 4, figsize=(12, 3))
@@ -66,7 +66,7 @@ def main(args):
     # # Get the smooth measurement process for range of phi
     phi_r = np.linspace(np.amin(phi["mean"]), np.amax(phi["mean"]), 1000)
     prob = 0.95
-    phi_yhat = model.phi_to_yhat(phi=phi_r, prob=prob)
+    phi_yhat = model.phi_to_yhat(phi=phi_r, prob=prob, num_samples=10_000)
     # Plot the smooth measurement process for range of phi
     ax = axs[3]
     ax.plot(phi_r, phi_yhat["mean"], label=r"$\hat{y}$")

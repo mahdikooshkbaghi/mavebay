@@ -5,7 +5,6 @@ from typing import Optional, Tuple
 
 import jax.numpy as jnp
 import numpy as np
-import numpyro
 import pandas as pd
 from jax.numpy import DeviceArray
 
@@ -259,13 +258,15 @@ def load_dataset(
     return jnp.array(x), jnp.array(y).reshape(-1, 1), L, C, alphabet, cons_seq
 
 
-def summary(samples, prob: Optional[float] = 0.95):
+def summary(samples, prob=0.95):
     """
     Compute sample statistics for the input samples.
     """
+    q = jnp.array([(1 - prob) / 2, 1 - (1 - prob) / 2])
     site_stats = {}
     site_stats = {
         "mean": jnp.mean(samples, axis=0),
-        "hdpi": numpyro.diagnostics.hpdi(samples, prob),
+        "hdpi": jnp.quantile(samples, q, axis=0),
     }
+
     return site_stats
