@@ -34,6 +34,61 @@ def ge_measurement(
     return g
 
 
+def multi_head_measurement(
+    D_Y: int,
+    phi: DeviceArray,
+    num_layers: Optional[int] = 2,
+    D_H: Optional[int] = 10,
+):
+    """
+    Represent blackbox measurement process from latent phenotype to the observation.
+
+    Parameters
+    ----------
+    D_Y (int):
+        The dimension of the observation.
+    phi (jax.numpy.DeviceArray):
+        The latent phenotype.
+    num_layers (int):
+        Number of hidden layers in neural network. Default = 2.
+    D_H (int):
+        Number of hidden nodes in the neural network layer. Default = 10.
+
+    Returns
+    -------
+    g: (jax.numpy.DeviceArray)
+        p(yhat|phi): the model prediction without noise.
+    """
+
+    # Find the dimension of the latent phenotype
+    D_phi = phi.shape[1]
+    D_X = D_phi
+
+    # Dictionary for the measurement process neural network weights.
+    w_dict = {}
+
+    # neural network layers
+    x = phi
+    for i in range(num_layers - 1):
+        w_name = f"w_{i}"
+        w_dict[w_name] = numpyro.sample(
+            w_name, dist.Normal(jnp.zeros((D_X, D_H)), jnp.ones((D_X, D_H)))
+        )
+        z = nonlinear_f("nonlinear", jnp.matmul(x, w_dict[w_name]))
+        x = z
+        D_X = x.shape[1]
+
+    # last layer
+    w_name = f"w_{num_layers}"
+    w_dict[w_name] = numpyro.sample(
+        w_name, dist.Normal(jnp.zeros((D_X, D_Y)), jnp.ones((D_X, D_Y)))
+    )
+    # last layer has linear activation function
+    g = jnp.matmul(x, w_dict[w_name])
+
+    return g
+
+
 # def mpa_measurement(Y, K, phi):
 #     """
 #     Y (int):

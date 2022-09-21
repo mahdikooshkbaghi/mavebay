@@ -10,7 +10,7 @@ from numpyro.infer import Predictive
 
 from .gpmaps import KOrderGPMap, additive_gp_map
 from .infer import fit
-from .measurements import ge_measurement
+from .measurements import ge_measurement, multi_head_measurement
 from .utils import summary
 
 
@@ -41,12 +41,14 @@ class Model:
         L: int,
         C: int,
         alphabet: str,
+        D_Y: Optional[int] = 1,
         regression_type: Optional[str] = "GE",
         gpmap_type: Optional[str] = "additive",
         gpmap_kwargs: Optional[dict] = None,
-        ge_hidden_nodes: Optional[int] = 20,
+        hidden_nodes: Optional[int] = 20,
         ge_nonlinearity_type: Optional[str] = "nonlinear",
         ge_noise_model_type: Optional[str] = "Gaussian",
+        num_layers: Optional[int] = 2,
         seed: Optional[int] = 1234,
     ):
 
@@ -56,6 +58,8 @@ class Model:
         self.C = C
         # Assign the alphabet
         self.alphabet = alphabet
+        # Dimension of the measurement
+        self.D_Y = D_Y
         # Assign the regression type
         self.regression_type = regression_type
         # Assign the gpmap type
@@ -63,11 +67,14 @@ class Model:
         # Assign the gpmap_kwargs
         self.gpmap_kwargs = gpmap_kwargs
         # Assign the number of nodes for the GE layer
-        self.ge_hidden_nodes = ge_hidden_nodes
+        self.hidden_nodes = hidden_nodes
         # Assign the nonlinearity type of the GE
         self.ge_nonlinearity_type = ge_nonlinearity_type
         # Assign the ge noise model type.
         self.ge_noise_model_type = ge_noise_model_type
+        # number of layers in blackbox measurement
+        # it will not be used in ge measurement.
+        self.num_layers = num_layers
         # Random seed
         self.seed = seed
         # Random number generator for jax. inference and prediction seeds
@@ -101,15 +108,16 @@ class Model:
             The noiseless predictions of the model. g=MP(phi)
         """
         if self.regression_type == "GE":
-            g = ge_measurement(self.ge_hidden_nodes, phi, self.ge_nonlinearity_type)
+            g = ge_measurement(self.hidden_nodes, phi, self.ge_nonlinearity_type)
+        if self.regression_type == "blackbox":
+            g = multi_head_measurement(
+                D_Y=self.D_Y, phi=phi, num_layers=self.num_layers, D_H=self.hidden_nodes
+            )
+
         return g
 
     def model(
-        self,
-        x: DeviceArray = None,
-        y: DeviceArray = None,
-        phi: DeviceArray = None,
-        batch_size: int = None,
+        self, x: DeviceArray = None, y: DeviceArray = None, phi: DeviceArray = None
     ):
 
         # Get the gp parameters
@@ -120,10 +128,6 @@ class Model:
             self.phi = phi
         else:
             phi = phi[..., jnp.newaxis]
-        if y is not None:
-            assert (
-                self.phi.shape == y.shape
-            ), f"phi has shape {self.phi.shape}, y has shape {y.shape}"
         g = self.set_mp_params(phi)
 
         if y is not None:
@@ -249,4 +253,4 @@ class Model:
             )
 
         phi_yhat = jax.jit(posterior_predictive)(self.rng_predict, phi=phi)["yhat"]
-        return jax.jit(summary)(samples=phi_yhat, prob=0.95)
+        return jax.jit(summary)(samples=phi_yhat, prob=prob)

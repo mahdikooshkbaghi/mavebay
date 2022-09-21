@@ -222,6 +222,9 @@ def load_dataset(
     ----------
     filename: (str)
         Path to the data set.
+    alphabet: (str)
+        alphabet
+    verbose: (bool)
     Returns
     -------
     x: (jnp.array)
@@ -247,15 +250,15 @@ def load_dataset(
     x = x_stats["x_ohe_nonravel"]
     cons_seq = x_stats["consensus_seq"]
     C = x.shape[2]
-    # training data is in log2 format
-    y = data_df["y"].values
+    # get the y values
+    y = data_df[[col for col in data_df if col.startswith("y")]]
 
     if verbose:
         # Preview dataset
         print("\nDataset looks like:")
         print(data_df.head())
         print(f"\nDataset consists of {len(data_df)} sequences\n")
-    return jnp.array(x), jnp.array(y).reshape(-1, 1), L, C, alphabet, cons_seq
+    return jnp.array(x), jnp.array(y), L, C, alphabet, cons_seq
 
 
 def summary(samples, prob=0.95):
