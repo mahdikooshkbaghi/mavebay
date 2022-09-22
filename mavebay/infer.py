@@ -1,7 +1,7 @@
 import time
 
 import numpyro.infer as infer
-import numpyro.optim as optim
+import optax
 
 # jax imports
 from jax.numpy import DeviceArray
@@ -116,7 +116,7 @@ class fit:
         guide = autoguide.AutoNormal(self.model, init_loc_fn=self.init_loc_fn)
 
         # Define the optimizer
-        optimizer = optim.Adam(self.learning_rate)
+        optimizer = optax.adam(self.learning_rate)
 
         # Loss function is the ELBO
         svi = SVI(self.model, guide, optimizer, loss=Trace_ELBO())

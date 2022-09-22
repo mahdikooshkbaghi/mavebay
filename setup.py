@@ -62,6 +62,7 @@ setup(
         "tqdm==4.64.0",
         "typing_extensions==4.3.0",
         "zipp==3.8.1",
+        "optax>=0.1.2",
     ],
     include_package_data=True,
     extras_require={  # To install additional packages for examples  pip install . "mavebay[examples]"
