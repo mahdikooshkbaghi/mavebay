@@ -63,6 +63,7 @@ setup(
         "typing_extensions==4.3.0",
         "zipp==3.8.1",
         "optax>=0.1.2",
+        "scikit-learn>=1.1",
     ],
     include_package_data=True,
     extras_require={  # To install additional packages for examples  pip install . "mavebay[examples]"

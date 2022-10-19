@@ -3,11 +3,13 @@ from typing import Optional
 import jax
 import jax.numpy as jnp
 import jax.random as random
+import numpy as np
 import numpyro
 import numpyro.distributions as dist
 from jax.numpy import DeviceArray
 from numpyro.infer import Predictive
 
+from .entropy import mi_continuous
 from .gpmaps import KOrderGPMap, additive_gp_map
 from .infer import fit
 from .measurements import ge_measurement, multi_head_measurement
@@ -23,17 +25,28 @@ class Model:
         Length of each training sequence. Must be ``>= 1``.
     C: (int)
         Length of the alphabet in the sequence.
+    alphabet: (str)
+        Alphabet used for one-hot encoding.
+    D_Y: (int)
+        Dimension of the Measurement
     regression_type: (str)
         Type of the regression.
-        The possible choice is 'GE' for now.
+        The possible choices are `GE` and `blackbox` for now.
     gpmap_type: (str)
         Type of the gpmap.
-        The possible choice is 'additive' for now.
-    gpmap_kwargs: dict():
+        The possible choices are 'additive' and 'kth_order' for now.
+    gpmap_kwargs: dict()
         The GP-map keywords input as dictionary.
+    hidden_nodes: (int)
+        The number of hidden nodes in the `GE` regression or nodes in each layer
+        in `blackbox` model.
     ge_noise_model_type: (str)
         Specifies the type of noise prior.
-        The possible choice for now: 'Gaussian'
+        The possible choice for now: 'Gaussian'.
+    num_layers: (int)
+        Number of hidden layer in `blackbox` measurement process.
+    seed: (int)
+        seed for random number generators.
     """
 
     def __init__(
@@ -79,6 +92,7 @@ class Model:
         self.seed = seed
         # Random number generator for jax. inference and prediction seeds
         self.rng_infer, self.rng_predict = random.split(random.PRNGKey(self.seed))
+        np.random.seed(self.seed)
 
     def set_gp_params(self, x: Optional[DeviceArray] = None):
         """
@@ -254,3 +268,78 @@ class Model:
 
         phi_yhat = jax.jit(posterior_predictive)(self.rng_predict, phi=phi)["yhat"]
         return jax.jit(summary)(samples=phi_yhat, prob=prob)
+
+    def I_predictive(
+        self,
+        x: Optional[DeviceArray] = None,
+        y: Optional[DeviceArray] = None,
+        knn: Optional[int] = 5,
+        knn_fuzz: Optional[float] = 0.01,
+        uncertainty: Optional[bool] = False,
+        num_subsamples: Optional[int] = 25,
+        use_LNC: Optional[bool] = False,
+        alpha_LNC: Optional[float] = 0.5,
+        verbose: Optional[bool] = False,
+    ):
+        """
+        Predictive Information.
+        Parameters
+        ----------
+        x: (jax.numpy.DeviceArray)
+            One-hot encoded input sequences
+        y: (jax.numpy.DeviceArray)
+            Array of measurements.
+            For GE models, ``y`` must be a 1D array of ``N`` floats.
+        knn: (int>0)
+            Number of nearest neighbors to use in the entropy estimators from
+            the NPEET package.
+        knn_fuzz: (float)
+            Amount of noise to add to ``phi`` values before passing them
+            to the KNN estimators. Specifically, Gaussian noise with standard deviation
+            ``knn_fuzz * np.std(phi)`` is added to ``phi`` values. This is a
+            hack and is not ideal, but is needed to get the KNN estimates to
+            behave well on real MAVE data.
+        uncertainty: (bool)
+            Whether to estimate the uncertainty in ``I_pred``.
+            Substantially increases runtime if ``True``.
+        num_subsamples: (int)
+            Number of subsamples to use when estimating the uncertainty in
+            ``I_pred``.
+        use_LNC: (bool)
+            Whether to use the Local Nonuniform Correction (LNC) of
+            Gao et al., 2015 when computing ``I_pred`` for GE models.
+            Substantially increases runtime set to ``True``.
+        alpha_LNC: (float in (0,1))
+            Value of ``alpha`` to use when computing the LNC correction.
+            See Gao et al., 2015 for details. Used only for GE models.
+        verbose: (bool)
+            Whether to print results and execution time.
+        Returns
+        -------
+        I_pred: (float)
+            Estimated variational information, in bits.
+        dI_pred: (float)
+            Standard error for ``I_pred``. Is ``0`` if ``uncertainty=False``
+            is used.
+        """
+
+        # Calculate the mean phi for given x
+        posterior_predictions = jax.jit(self.posterior_predictive)(
+            self.rng_predict, x=x
+        )
+        # TODO: do we need this even if we are doing fully bayesian inference?
+        phi_mean = jnp.mean(posterior_predictions["phi"], axis=0).ravel()
+        phi = phi_mean + knn_fuzz * phi_mean.std(ddof=1) * np.random.randn(
+            len(phi_mean)
+        )
+
+        # Compute mi estimate
+        return mi_continuous(
+            phi,
+            y,
+            knn=knn,
+            uncertainty=uncertainty,
+            use_LNC=use_LNC,
+            alpha_LNC=alpha_LNC,
+            verbose=verbose,
+        )

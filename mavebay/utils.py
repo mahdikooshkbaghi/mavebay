@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 from jax.numpy import DeviceArray
 
+TINY = np.sqrt(np.finfo(np.float32).tiny)
+
 # Print pandas in terminal with better format
 pd.set_option("expand_frame_repr", False)
 
@@ -215,27 +217,28 @@ def load_dataset(
     filename: Optional[str] = None,
     alphabet: Optional[np.array] = "protein",
     verbose: Optional[bool] = True,
-) -> Tuple[DeviceArray, DeviceArray, int, int]:
+) -> Tuple[DeviceArray, DeviceArray, int, int, str]:
     """
     Load dataset provided as csv file.
     Parameters
     ----------
     filename: (str)
-        Path to the data set.
+        Path to the data set in pd.DataFrame format `csv.gz`.
     alphabet: (str)
         alphabet
     verbose: (bool)
     Returns
     -------
-    x: (jnp.array)
+    x: (jax.numpy.DeviceArray)
         One-hot encoded of the sequences.
-    y: (jnp.array)
+    y: (jax.numpy.DeviceArray)
         Measurements.
     L: (int):
         sequence length.
     C: (int)
         alphabet length.
-
+    cons_seq: (str)
+        consensus sequence.
     """
     # Load the dataset
     data_df = pd.read_csv(filename)
@@ -273,3 +276,26 @@ def summary(samples, prob=0.95):
     }
 
     return site_stats
+
+
+# def entropy_metric():
+#     if self.regression_type == "GE":
+#         self.y_norm = np.array(self.y_norm).reshape(-1, 1)
+
+#         # Subsample y_norm for entropy estimation if necessary
+#         N_max = int(1e4)
+#         if self.N > N_max:
+#             z = np.random.choice(a=self.y_norm.squeeze(), size=N_max, replace=False)
+#         else:
+#             z = self.y_norm.squeeze()
+
+#         # Add some noise to aid in entropy estimation
+#         z += knn_fuzz * z.std(ddof=1) * np.random.randn(z.size)
+
+#         # Compute entropy
+#         H_y_norm, dH_y = entropy_continuous(z, knn=7, resolution=0)
+#         H_y = H_y_norm + np.log2(self.y_std + TINY)
+
+#         self.info_for_layers_dict["H_y"] = H_y
+#         self.info_for_layers_dict["H_y_norm"] = H_y_norm
+#         self.info_for_layers_dict["dH_y"] = dH_y

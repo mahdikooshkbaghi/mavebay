@@ -40,6 +40,9 @@ def main(args):
     # Get the model posterior prediction mean and hdi for x sequences
     yhat, phi = model.ppc(num_samples=100, x=x, prob=0.95)
 
+    # Variational Information calculation
+    I_var, dI_var = model.I_predictive(x=x, y=y, uncertainty=True)
+
     # ELBO loss, measurements vs predictions, y-phi space plots
     fig, axs = plt.subplots(1, 4, figsize=(12, 3))
     ax = axs[0]
@@ -51,7 +54,7 @@ def main(args):
     ax.plot(y, yhat["mean"], "o", alpha=0.01)
     Rsq = np.corrcoef(y.ravel(), np.array(yhat["mean"]).ravel())[0, 1] ** 2
     ax.plot(y, y, c="r")
-    ax.set_title(f"$R^2$ = {Rsq:.3f}")
+    ax.set_title(rf"$R^2$ = {Rsq:.3f}")
     ax.set_xlabel("y measurements")
     ax.set_ylabel("mean y predictions")
 
@@ -60,8 +63,8 @@ def main(args):
     ax.scatter(phi["mean"], yhat["hdpi"][0], alpha=0.01, s=1, label=r"$\hat{y}$ 2.5%")
     ax.scatter(phi["mean"], yhat["hdpi"][1], alpha=0.01, s=1, label=r"$\hat{y}$ 97.5%")
     ax.legend(fontsize=8)
-    ax.set_xlabel("mean $\phi$")  # noqa
-    ax.set_ylabel("$y$ predictions")
+    ax.set_xlabel(r"mean $\phi$")  # noqa
+    ax.set_ylabel(r"$y$ predictions")
 
     # # Get the smooth measurement process for range of phi
     phi_r = np.linspace(np.amin(phi["mean"]), np.amax(phi["mean"]), 1000)
@@ -81,9 +84,9 @@ def main(args):
     )
     ax.scatter(phi["mean"], y, s=1, c="k", label="data", alpha=0.1)
     ax.legend(fontsize=7)
-    ax.set_xlabel("$\phi$")  # noqa
-    ax.set_ylabel("$y$ predictions")
-
+    ax.set_xlabel(r"$\phi$")  # noqa
+    ax.set_ylabel(r"$y$ predictions")
+    ax.set_title(rf"I_var={I_var:.4f}$\pm${dI_var:4f}")
     plt.tight_layout()
     plt.show()
 
@@ -158,7 +161,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-ds",
         "--data",
-        default="mpsa",
+        default="abeta",
         type=str,
         help="Dataset to read from online MAVENN repo",
     )

@@ -2,9 +2,28 @@
 
 # Installation
 
+One can install the package directly from the `github` repository or install it from the local cloned version.
+
+The base installation `"mavebay"` avoids additional packages such as `matplotlib`, `arviz`, `logomaker` and etc.
+
+The full installation which is suitable to run demos is also provided `"mavebay[examples]"`.
+
+## Installing from `github`
+
+1. Create the virtual environment.
+2. Install the base or full `mavebay` package.
+
+```bash
+python -m venv test_mavebay
+source test_mavebay/bin/activate
+pip install git+https://github.com/mahdikooshkbaghi/mavebay "mavebay[examples]"
+```
+
+## Installing from the cloned repository 
+
 1. Clone the repo.
 2. Create the virtual environment.
-3. Install the mavebay and optinionally required packages for the examples.
+3. Install the base or full `mavebay` package.
 
 ```bash
 git clone git@github.com:mahdikooshkbaghi/mavebay.git
@@ -12,8 +31,39 @@ cd mavebay
 python -m venv test_mavebay
 source test_mavebay/bin/activate
 pip install . "mavebay"
+# OR
 pip install . "mavebay[examples]"
 ```
+
+# Demos
+
+The global epistasis (GE) measurement process example script is provided in the `example` folder.
+The following command can be used to run demos
+
+```bash
+python global_epistasis_demo.py -n [NUM_SAMPLES]        \
+                                -lr [LEARNING_RATE]     \
+                                -m [METHOD]             \
+                                -ds [DATA]              \
+                                -k [INTERACTION_ORDER]  \
+                                -d [DEVICE]             \
+                                -i [INIT_LOC_FN]        \
+                                -p [PROGRESS_BAR]
+
+```
+All the arguments has some default values which are provided in the script.
+
+- `NUM_SAMPLES`: number of samples for `mcmc` or number of steps in the `svi`.
+- `LEARNING_RATE`: the learning rate for the optimizer in `svi` method.
+- `METHOD`: method of inference: `mcmc` or `svi`
+- `DATA`: dataset to use for the inference. Descriptions of the datasets are given in the MAVE-NN manuscript.
+    - `abeta`: DMS data for Aβ (default dataset). 
+    - `tdp43`: DMS data for TDP-43.
+    - `mpsa`: MPSA data for 5' splicing sites.
+- `INTERACTION_ORDER`: `k=1 (default)` corresponds to the additive GP map, `k=2` pairwise GP map and so on.
+- `DEVICE`: `cpu (default)` or `gpu`.
+- `INIT_LOC_FN`: initialization for the `svi` sampling. Default it `feasible`. Others can be assigned based on the `numpyro` documentation.
+- `PROGRESS_BAR`: enable (default) or disable the progress bar of the inference. 
 
 
 # TODO list for MAVEBAY
@@ -35,19 +85,4 @@ Bayesian Version of MAVENN1.0
 - [x] Make the ppc smooth.
     - [x] As I suspected the number of samples from posteriors were not enough to make the phi_to_yhat smooth. Increasing that fixed the issue.
 - [ ] Put the MAVENN heatmap and pairwise to utils function
-- [ ] Information metrics calculation.
-
-
-
-## Mathematical explanation for some of TODO items.
-
-### MPA measurement processes
-
-In MPA regression, MAVE-NN directly models the measurement process $p(y|\phi)$. At present, MAVE-NN only supports MPA regression for discrete values of $y$, which are indexed using nonnegative integers. MAVE-NN takes two forms of input for MPA regression. One is a set of (non-unique) sequence-measurement pairs $\{(x_n, y_n)\}_{n=0}^{N-1}$, where $N$ is the total number of independent measurements and $y_n \in  \{0,1,\ldots,Y-1\}$, where $Y$ is the total number of bins. The other is a set of (unique) sequence-count-vector pairs $\{(x_m, c_m)\}_{m=0}^{M-1}$, where $M$ is the total number of unique sequences in the data set, and $\vec{c}_m = (c_{m0}, c_{m1}, \ldots, c_{m(Y-1)})$ lists, for each value of $y$, the number of times $c_{my}$ that the sequence $\vec{x}_m$ was observed in bin $y$. MPA measurement processes are computed internally using the latter representation via
-
-$$p(y|\phi) = \frac{w_y(\phi)}{\sum_{y'} w_{y'}(\phi)}$$
-
-$$w_y(\phi) = \exp \left[ a_y + \sum_{k=0}^{K-1} b_{yk} \tanh(c_{yk} \phi + d_{yk}) \right]~~~~~~
-$$
-
-where $K$ is the number of hidden nodes per value of $y$. The trainable parameters of this measurement process are thus $\eta = \{a_y, b_{yk}, c_{yk}, d_{yk}\}$. 
+- [x] Information metrics calculation.
